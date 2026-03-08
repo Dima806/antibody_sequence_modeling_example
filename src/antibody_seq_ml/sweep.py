@@ -91,5 +91,7 @@ if __name__ == "__main__":
     if api_key:
         wandb.login(key=api_key)
 
-    sweep_id = wandb.sweep(sweep=sweep_cfg, project="antibody-seq-ml")
+    sweep_id = wandb.sweep(
+        sweep=sweep_cfg, project="antibody-seq-ml", entity="dima806-team"
+    )
     wandb.agent(sweep_id, function=sweep_train_fn, count=count)

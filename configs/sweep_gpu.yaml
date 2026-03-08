@@ -23,4 +23,4 @@ parameters:
     min: 0.00001
     max: 0.001
     distribution: log_uniform_values
-count: 50
+count: 10

@@ -17,10 +17,10 @@ model:
   esm_trainable_layers: 2
 
 training:
-  epochs: 30
+  epochs: 10
   learning_rate: 0.001
   weight_decay: 0.0001
-  patience: 5
+  patience: 2
   checkpoint_dir: checkpoints
   cls_loss_weight: 1.0
   reg_loss_weight: 0.1
@@ -28,6 +28,6 @@ training:
 
 wandb:
   project: antibody-seq-ml
-  entity: dima806
+  entity: dima806-team
   log_gradients: true
   mode: online             # online | offline | disabled

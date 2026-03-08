@@ -4,7 +4,7 @@
 
 **AntibodySeqML** is an end-to-end deep learning pipeline for predicting biophysical properties of antibody CDR-H3 sequences. It is a portfolio project targeting Roche Prescient Design / AI4DD ML Scientist role.
 
-**W&B project:** `antibody-seq-ml` | **W&B entity:** `dima806`
+**W&B project:** `antibody-seq-ml` | **W&B entity:** `dima806-team`
 
 **Two prediction tasks (multi-task head or separate runs):**
 - CDR-H3 length classification: short / medium / long (3-class)
@@ -511,7 +511,7 @@ training:
 
 wandb:
   project: antibody-seq-ml
-  entity: dima806
+  entity: dima806-team
   log_gradients: true
   mode: online             # online | offline | disabled
 ```

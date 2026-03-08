@@ -1,12 +1,44 @@
 # AntibodySeqML
 
-End-to-end deep learning pipeline for predicting biophysical properties of antibody CDR-H3 sequences.
+End-to-end deep learning pipeline for predicting biophysical properties of antibody CDR-H3 sequences using sequence-based models and large pre-trained protein language models.
 
-**Two prediction tasks (multi-task):**
-- CDR-H3 length classification: `short` / `medium` / `long` (3-class)
-- Hydrophobicity regression: Kyte-Doolittle GRAVY score (scalar)
+## What This Project Is About
 
-**W&B project:** [dima806/antibody-seq-ml](https://wandb.ai/dima806/antibody-seq-ml)
+Therapeutic antibodies are one of the fastest-growing classes of drugs, with applications in oncology, immunology, and infectious disease. A key bottleneck in antibody drug discovery is screening large sequence libraries for candidates with favourable biophysical properties — high specificity, good solubility, low aggregation risk — which are expensive and slow to measure experimentally.
+
+This project trains deep learning models to predict two such properties directly from the CDR-H3 amino acid sequence (the primary determinant of antigen binding specificity):
+
+| Task | Output | Model head |
+|---|---|---|
+| Length classification | `short` (≤9 AA) / `medium` (10–14 AA) / `long` (≥15 AA) | 3-class softmax |
+| Hydrophobicity regression | Kyte-Doolittle GRAVY score | Scalar regression |
+
+Training data comes from the [Observed Antibody Space (OAS)](https://opig.stats.ox.ac.uk/webapps/oas/) — a database of ~1 billion naturally occurring human and animal antibody sequences — providing broad coverage of CDR-H3 diversity.
+
+Three model architectures are compared:
+- **BiLSTM** — bidirectional LSTM with mean pooling, fast and interpretable baseline
+- **Transformer** — encoder-only with sinusoidal positional encoding and CLS-token pooling
+- **ESM-2** — 8M-parameter protein language model (Meta AI) fine-tuned on CDR sequences (GPU only)
+
+## Potential Value & Further Use
+
+**In drug discovery pipelines:**
+- Rapid in-silico pre-screening of CDR-H3 libraries before costly wet-lab assays
+- Prioritising candidates by predicted hydrophobicity (a proxy for aggregation and manufacturability risk)
+- Filtering out sequences with unusually short or long CDR-H3 loops that may indicate structural instability
+
+**As a research foundation:**
+- Extend the regression head to predict additional properties: thermal stability (Tm), polyspecificity, viscosity, or expression yield — all measurable and available in public datasets
+- Replace CDR-H3 with full variable-domain sequences (VH/VL) for broader coverage
+- Add a generative head (e.g. VAE or diffusion decoder) to condition sequence generation on desired biophysical targets
+- Plug ESM-2 embeddings into docking score predictors or structure-guided property models (AlphaFold-compatible)
+
+**As an MLOps reference:**
+- Demonstrates dual-environment training (CPU dev / GPU production) with shared codebase
+- Full W&B experiment tracking, sweep optimisation, and model registry integration
+- Schema-validated data pipeline with reproducible smoke data and Zenodo-sourced full data
+
+**W&B project:** [dima806-team/antibody-seq-ml](https://wandb.ai/dima806-team/antibody-seq-ml)
 
 ---
 
