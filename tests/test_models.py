@@ -49,9 +49,9 @@ def test_output_hydro_pred_shape(smoke_cfg, device) -> None:
     for ModelClass in (BiLSTMModel, TransformerModel):
         model = ModelClass(smoke_cfg, device).to(device)
         out = model(_make_input())
-        assert out["hydro_pred"].shape == (BATCH_SIZE,), (
-            f"{ModelClass.__name__} hydro_pred shape mismatch"
-        )
+        assert out["hydro_pred"].shape == (
+            BATCH_SIZE,
+        ), f"{ModelClass.__name__} hydro_pred shape mismatch"
 
 
 def test_padding_mask_applied(smoke_cfg, device) -> None:

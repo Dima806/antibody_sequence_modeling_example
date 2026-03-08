@@ -23,23 +23,24 @@
 
 ---
 
-## Repository Structure to Implement
+## Repository Structure
 
 ```
 antibody_sequence_modeling_example/
 ├── .devcontainer/
 │   └── devcontainer.json
-├── .github/
-│   └── workflows/
-│       └── ci.yml
+├── .pre-commit-config.yaml
 ├── configs/
 │   ├── default.yaml
+│   ├── schema.yaml                    # Dataset schema — validated on every data write
 │   ├── sweep_cpu.yaml
 │   └── sweep_gpu.yaml
 ├── data/
 │   ├── smoke/
 │   │   └── sequences_smoke.csv
-│   └── download.py
+│   ├── download.py                    # Zenodo / OAS API download
+│   ├── generate_smoke.py
+│   └── validate.py                    # Schema validator (reads configs/schema.yaml)
 ├── src/
 │   └── antibody_seq_ml/
 │       ├── __init__.py
@@ -61,7 +62,6 @@ antibody_sequence_modeling_example/
 │   ├── test_dataset.py
 │   ├── test_models.py
 │   └── test_train.py
-├── .pre-commit-config.yaml
 ├── CLAUDE.md
 ├── Makefile
 ├── pyproject.toml
@@ -138,76 +138,72 @@ antibody_sequence_modeling_example/
    }
    ```
 
-4. **`.github/workflows/ci.yml`** — lint + test on CPU smoke data:
-   ```yaml
-   name: CI
-   on: [push, pull_request]
-   jobs:
-     test:
-       runs-on: ubuntu-latest
-       steps:
-         - uses: actions/checkout@v4
-         - uses: actions/setup-python@v5
-           with: {python-version: "3.11"}
-         - run: pip install uv && uv pip install -e . --system
-         - run: ruff check src tests
-         - run: pytest tests/ --cov=src/antibody_seq_ml --cov-report=term-missing -v
-   ```
-
-5. **`Makefile`**:
+4. **`Makefile`** (grouped by section):
    ```makefile
-   .PHONY: setup data-smoke data-full train-smoke sweep-cpu test lint notebook
-
+   # Environment
    setup:
        pip install uv && uv pip install -e . --system
-       pre-commit install
+       uv tool install prek && prek install
 
+   # Data
    data-smoke:
-       @echo "Smoke dataset already in data/smoke/sequences_smoke.csv"
-
+       python data/generate_smoke.py --output data/smoke/sequences_smoke.csv
    data-full:
-       python data/download.py --output data/full/
+       python data/download.py --output data/full/ --source zenodo
 
+   # Training
    train-smoke:
-       python -m antibody_seq_ml.train \
+       WANDB_MODE=disabled python -m antibody_seq_ml.train \
            --config configs/default.yaml \
            --data data/smoke/sequences_smoke.csv \
            --smoke
-
+   train-full:
+       python -m antibody_seq_ml.train \
+           --config configs/default.yaml \
+           --data data/full/sequences_full.csv
    sweep-cpu:
        python -m antibody_seq_ml.sweep \
            --config configs/sweep_cpu.yaml \
            --data data/smoke/sequences_smoke.csv
+   sweep-gpu:
+       python -m antibody_seq_ml.sweep \
+           --config configs/sweep_gpu.yaml \
+           --data data/full/sequences_full.csv
 
+   # Quality
    test:
-       pytest tests/ -v --cov=src/antibody_seq_ml --cov-report=term-missing
-
+       WANDB_MODE=disabled pytest tests/ -v --cov=src/antibody_seq_ml --cov-report=term-missing
    lint:
-       ruff check src tests
-       black --check src tests
-       mypy src/antibody_seq_ml
+       pre-commit run --all-files
 
+   # Notebooks
    notebook:
        jupyter notebook notebooks/01_eda.ipynb
    ```
 
-6. **`.pre-commit-config.yaml`**:
+5. **`.pre-commit-config.yaml`**:
    ```yaml
    repos:
+     - repo: https://github.com/pre-commit/pre-commit-hooks
+       rev: v4.6.0
+       hooks:
+         - id: trailing-whitespace
+         - id: end-of-file-fixer
+         - id: check-yaml
+         - id: check-toml
+         - id: check-json
+         - id: check-merge-conflict
+         - id: check-added-large-files
+           args: [--maxkb=500]
+         - id: debug-statements
+         - id: mixed-line-ending
+           args: [--fix=lf]
      - repo: https://github.com/astral-sh/ruff-pre-commit
        rev: v0.4.4
        hooks:
          - id: ruff
            args: [--fix]
-     - repo: https://github.com/psf/black
-       rev: 24.4.2
-       hooks:
-         - id: black
-     - repo: https://github.com/pre-commit/mirrors-mypy
-       rev: v1.9.0
-       hooks:
-         - id: mypy
-           additional_dependencies: [torch-stubs]
+         - id: ruff-format
    ```
 
 ### Phase 2 — Data Layer
@@ -228,7 +224,19 @@ Stratify 70/15/15 train/val/test across `length_class`. Commit this file — it 
 
 #### `data/download.py`
 
-Downloads full OAS dataset (~500K paired human sequences). Accepts `--output` path. Implements chunked download with progress bar. On Kaggle, this data is then cached as a Kaggle Dataset artifact.
+Downloads full OAS paired dataset. Supports two sources via `--source`:
+- `zenodo` (default) — p-IgGen pre-processed snapshot from Zenodo record 13880874, no auth
+- `oas-api` — OAS REST API at opig.stats.ox.ac.uk, no auth, `--max-units` controls volume
+
+When the source data has no CDR-H3 column, it is extracted from the heavy chain sequence using the conserved `C...WGxG` flanking motif regex. Calls `data/validate.py` before writing the CSV.
+
+#### `data/validate.py`
+
+Reads `configs/schema.yaml` and validates a DataFrame against it. Checks column presence, nullability, dtype ranges, enum values, and derived invariants (`cdr_h3_length == len(cdr_h3)`, length class boundaries). Raises `ValueError` on any violation. Called by both `generate_smoke.py` and `download.py`.
+
+#### `configs/schema.yaml`
+
+Single source of truth for the dataset schema. Defines dtype, nullable, min/max (numeric), min/max_length (string), and allowed values for each of the 6 columns.
 
 #### `src/antibody_seq_ml/dataset.py`
 
@@ -417,6 +425,7 @@ Key design decisions:
   })
   ```
 - **Hardware tag:** log `wandb.config.update({"hardware": "gpu:T4" if cuda else "cpu"})`
+- **W&B authentication:** reads `WANDB_API_KEY` from environment and calls `wandb.login()` before `wandb.init()`. Injected automatically from Codespaces / Kaggle secrets.
 - **CLI entry point:** `python -m antibody_seq_ml.train --config configs/default.yaml --data path/to/data.csv [--smoke]`
   - `--smoke` flag overrides config to use smoke-scale hyperparameters (small model, 10 epochs)
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 
 import torch
 from omegaconf import DictConfig, OmegaConf
@@ -85,6 +86,10 @@ if __name__ == "__main__":
     sweep_cfg = OmegaConf.to_container(OmegaConf.load(args.config), resolve=True)
     assert isinstance(sweep_cfg, dict)
     count = sweep_cfg.pop("count", 5)
+
+    api_key = os.environ.get("WANDB_API_KEY")
+    if api_key:
+        wandb.login(key=api_key)
 
     sweep_id = wandb.sweep(sweep=sweep_cfg, project="antibody-seq-ml")
     wandb.agent(sweep_id, function=sweep_train_fn, count=count)

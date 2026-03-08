@@ -4,10 +4,14 @@ from __future__ import annotations
 
 import argparse
 import random
+import sys
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from data.validate import validate
 
 random.seed(42)
 np.random.seed(42)
@@ -94,6 +98,8 @@ def generate(output_path: str, n_per_class: dict[str, int] | None = None) -> Non
     df = pd.DataFrame(rows)
     # Shuffle
     df = df.sample(frac=1, random_state=42).reset_index(drop=True)
+
+    validate(df)
 
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)

@@ -115,9 +115,9 @@ def test_early_stopping_triggers(smoke_cfg, device, tmp_checkpoint) -> None:
         train.__globals__["_run_epoch"] = original_run_epoch
 
     # With patience=1, should stop at epoch 2 (best at epoch 1, no improvement at epoch 2)
-    assert call_count["n"] <= 3, (
-        f"Early stopping should have triggered, but val epoch was called {call_count['n']} times"
-    )
+    assert (
+        call_count["n"] <= 3
+    ), f"Early stopping should have triggered, but val epoch was called {call_count['n']} times"
 
 
 def test_wandb_disabled_mode(smoke_cfg, device, tmp_checkpoint) -> None:

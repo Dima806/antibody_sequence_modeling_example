@@ -1,0 +1,42 @@
+# Dataset schema — applies to both smoke and full OAS data.
+# Validated by data/validate.py after every generate / download run.
+
+columns:
+  sequence_id:
+    dtype: str
+    nullable: false
+
+  heavy_chain_sequence:
+    dtype: str
+    nullable: false
+    min_length: 30
+
+  cdr_h3:
+    dtype: str
+    nullable: false
+    min_length: 5
+    max_length: 30
+
+  cdr_h3_length:
+    dtype: int
+    nullable: false
+    min: 5
+    max: 30
+
+  length_class:
+    dtype: str
+    nullable: false
+    values: [short, medium, long]
+
+  hydrophobicity:
+    dtype: float
+    nullable: false
+    min: -5.0
+    max: 5.0
+
+# Derived invariants checked at validation time
+invariants:
+  - cdr_h3_length == len(cdr_h3)
+  - length_class == "short"  iff  cdr_h3_length <= 9
+  - length_class == "medium" iff  10 <= cdr_h3_length <= 14
+  - length_class == "long"   iff  cdr_h3_length >= 15

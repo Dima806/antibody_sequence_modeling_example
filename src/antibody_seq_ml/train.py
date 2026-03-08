@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 from pathlib import Path
 
 import numpy as np
@@ -271,6 +272,9 @@ if __name__ == "__main__":
 
     wandb_run = None
     if cfg.wandb.mode != "disabled":
+        api_key = os.environ.get("WANDB_API_KEY")
+        if api_key:
+            wandb.login(key=api_key)
         wandb_run = wandb.init(
             project=cfg.wandb.project,
             entity=cfg.wandb.entity,
