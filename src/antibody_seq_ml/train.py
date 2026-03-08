@@ -52,7 +52,11 @@ def _run_epoch(
             if training and optimizer is not None:
                 optimizer.zero_grad()
 
-            output = model(input_ids)
+            # ESM-2 expects raw string sequences; all other models take token tensors
+            if type(model).__name__ == "ESM2FineTuned":
+                output = model(batch["sequence"])
+            else:
+                output = model(input_ids)
             cls_loss = F.cross_entropy(output["class_logits"], length_labels)
             reg_loss = F.mse_loss(output["hydro_pred"], hydro_scores)
             loss = (

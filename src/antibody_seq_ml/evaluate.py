@@ -40,7 +40,10 @@ def evaluate(
             length_labels = batch["length_label"].to(device)
             hydro_scores = batch["hydro_score"].to(device)
 
-            output = model(input_ids)
+            if type(model).__name__ == "ESM2FineTuned":
+                output = model(batch["sequence"])
+            else:
+                output = model(input_ids)
             cls_loss = F.cross_entropy(output["class_logits"], length_labels)
             reg_loss = F.mse_loss(output["hydro_pred"], hydro_scores)
             loss = cls_loss_weight * cls_loss + reg_loss_weight * reg_loss

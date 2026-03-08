@@ -73,11 +73,12 @@ class CDRDataset(Dataset):
     def __len__(self) -> int:
         return len(self.sequences)
 
-    def __getitem__(self, idx: int) -> dict[str, torch.Tensor]:
+    def __getitem__(self, idx: int) -> dict:
         return {
             "input_ids": self.tokeniser.encode(self.sequences[idx], self.max_len),
             "length_label": torch.tensor(self.length_labels[idx], dtype=torch.long),
             "hydro_score": torch.tensor(self.hydro_scores[idx], dtype=torch.float32),
+            "sequence": self.sequences[idx],  # raw string for ESM-2
         }
 
 

@@ -27,30 +27,33 @@ def build_cfg_from_wandb(
     training_overrides: dict = {}
     data_overrides: dict = {}
 
+    # (section, key, type) — explicit casting guards against W&B wrapper types
     mapping = {
-        "model_type": ("model", "type"),
-        "learning_rate": ("training", "learning_rate"),
-        "dropout": ("model", "dropout"),
-        "batch_size": ("data", "batch_size"),
-        "num_layers": ("model", "num_layers"),
-        "weight_decay": ("training", "weight_decay"),
+        "model_type": ("model", "type", str),
+        "learning_rate": ("training", "learning_rate", float),
+        "dropout": ("model", "dropout", float),
+        "batch_size": ("data", "batch_size", int),
+        "num_layers": ("model", "num_layers", int),
+        "weight_decay": ("training", "weight_decay", float),
     }
 
     cfg_dict = wandb_cfg if isinstance(wandb_cfg, dict) else dict(wandb_cfg)
 
-    for wkey, (section, ckey) in mapping.items():
+    for wkey, (section, ckey, cast) in mapping.items():
         if wkey in cfg_dict:
+            value = cast(cfg_dict[wkey])
             if section == "model":
-                model_overrides[ckey] = cfg_dict[wkey]
+                model_overrides[ckey] = value
             elif section == "training":
-                training_overrides[ckey] = cfg_dict[wkey]
+                training_overrides[ckey] = value
             elif section == "data":
-                data_overrides[ckey] = cfg_dict[wkey]
+                data_overrides[ckey] = value
 
     # embedding_dim syncs to both model.embedding_dim and model.d_model
     if "embedding_dim" in cfg_dict:
-        model_overrides["embedding_dim"] = cfg_dict["embedding_dim"]
-        model_overrides["d_model"] = cfg_dict["embedding_dim"]
+        dim = int(cfg_dict["embedding_dim"])
+        model_overrides["embedding_dim"] = dim
+        model_overrides["d_model"] = dim
 
     overrides: dict = {}
     if model_overrides:
