@@ -1,4 +1,4 @@
-.PHONY: setup data-smoke data-full train-smoke sweep-cpu test lint notebook
+.PHONY: setup data-smoke data-full train-smoke sweep-cpu test lint prek notebook
 
 setup:
 	pip install uv && uv pip install -e . --system
@@ -29,6 +29,9 @@ test:
 lint:
 	ruff check src tests --fix
 	ruff format src tests
+
+prek:
+	pre-commit run --all-files
 
 notebook:
 	jupyter notebook notebooks/01_eda.ipynb
