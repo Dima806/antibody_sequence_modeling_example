@@ -1,4 +1,5 @@
 wandb>=0.17
+datasets>=2.19
 biopython>=1.83
 omegaconf>=2.3
 fair-esm>=2.0.0

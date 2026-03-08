@@ -1,23 +1,19 @@
-"""Download full OAS paired antibody dataset (~500K sequences).
+"""Download full OAS paired antibody dataset from HuggingFace.
 
-Usage (on Kaggle or locally with bandwidth):
+Dataset: https://huggingface.co/datasets/bloyal/oas-paired-sequence-data
+
+Usage (on Kaggle or locally):
     python data/download.py --output data/full/
+    python data/download.py --output data/full/ --split train
 """
 
 from __future__ import annotations
 
 import argparse
-import io
-import time
 from pathlib import Path
 
 import pandas as pd
-import requests
-
-# OAS bulk download index for paired human sequences
-OAS_PAIRED_INDEX = (
-    "http://opig.stats.ox.ac.uk/webapps/oas/api/paired/?species=human&limit=1000"
-)
+from datasets import load_dataset
 
 KYTE_DOOLITTLE: dict[str, float] = {
     "A": 1.8,
@@ -42,6 +38,8 @@ KYTE_DOOLITTLE: dict[str, float] = {
     "V": 4.2,
 }
 
+HF_DATASET = "bloyal/oas-paired-sequence-data"
+
 
 def gravy(sequence: str) -> float:
     sequence = sequence.upper()
@@ -60,23 +58,6 @@ def classify_length(length: int) -> str:
         return "long"
 
 
-def download_oas_unit(url: str, retries: int = 3) -> pd.DataFrame | None:
-    """Download a single OAS data unit CSV and return parsed DataFrame."""
-    for attempt in range(retries):
-        try:
-            resp = requests.get(url, timeout=60)
-            resp.raise_for_status()
-            # OAS CSVs have a metadata header row — skip it
-            df = pd.read_csv(io.StringIO(resp.text), header=1)
-            return df
-        except Exception as exc:
-            if attempt < retries - 1:
-                time.sleep(2**attempt)
-            else:
-                print(f"  Failed to download {url}: {exc}")
-    return None
-
-
 def preprocess(df: pd.DataFrame) -> pd.DataFrame:
     """Extract CDR-H3, compute labels, drop rows with missing data."""
     cdr_col = next(
@@ -88,6 +69,7 @@ def preprocess(df: pd.DataFrame) -> pd.DataFrame:
         None,
     )
     if cdr_col is None or seq_col is None:
+        print(f"  Could not find required columns. Available: {list(df.columns)}")
         return pd.DataFrame()
 
     out = pd.DataFrame()
@@ -102,56 +84,40 @@ def preprocess(df: pd.DataFrame) -> pd.DataFrame:
     return out.reset_index(drop=True)
 
 
-def download(output_dir: str, max_units: int = 200) -> None:
+def download(output_dir: str, split: str = "train") -> None:
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
 
-    print("Fetching OAS paired index...")
-    try:
-        resp = requests.get(OAS_PAIRED_INDEX, timeout=30)
-        resp.raise_for_status()
-        index_data = resp.json()
-    except Exception as exc:
-        print(f"Failed to fetch OAS index: {exc}")
-        print(
-            "Please download OAS data manually from http://opig.stats.ox.ac.uk/webapps/oas/"
-        )
+    print(f"Loading HuggingFace dataset: {HF_DATASET} (split={split}) ...")
+    hf_ds = load_dataset(HF_DATASET, split=split)
+    df = hf_ds.to_pandas()
+    print(f"Downloaded {len(df):,} rows with columns: {list(df.columns)}")
+
+    print("Preprocessing ...")
+    processed = preprocess(df)
+
+    if processed.empty:
+        print("No valid sequences found after preprocessing.")
         return
 
-    units = index_data.get("results", [])[:max_units]
-    print(f"Found {len(units)} data units to download")
-
-    all_dfs = []
-    for i, unit in enumerate(units):
-        url = unit.get("data_url", "")
-        if not url:
-            continue
-        print(f"  [{i+1}/{len(units)}] {url}")
-        raw = download_oas_unit(url)
-        if raw is not None and len(raw) > 0:
-            processed = preprocess(raw)
-            if len(processed) > 0:
-                all_dfs.append(processed)
-
-    if not all_dfs:
-        print("No data downloaded.")
-        return
-
-    full_df = pd.concat(all_dfs, ignore_index=True)
-    full_df = full_df.drop_duplicates(subset=["cdr_h3"]).reset_index(drop=True)
-    full_df["sequence_id"] = [f"seq_{i:06d}" for i in range(len(full_df))]
+    processed = processed.drop_duplicates(subset=["cdr_h3"]).reset_index(drop=True)
+    processed["sequence_id"] = [f"seq_{i:06d}" for i in range(len(processed))]
 
     out_csv = output_path / "sequences_full.csv"
-    full_df.to_csv(out_csv, index=False)
-    print(f"\nSaved {len(full_df)} sequences → {out_csv}")
-    print(full_df["length_class"].value_counts().to_string())
+    processed.to_csv(out_csv, index=False)
+    print(f"\nSaved {len(processed):,} sequences → {out_csv}")
+    print(processed["length_class"].value_counts().to_string())
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Download full OAS dataset")
+    parser = argparse.ArgumentParser(
+        description="Download OAS paired dataset from HuggingFace"
+    )
     parser.add_argument("--output", default="data/full/", help="Output directory")
     parser.add_argument(
-        "--max-units", type=int, default=200, help="Max OAS units to download"
+        "--split",
+        default="train",
+        help="Dataset split to download (train / validation / test)",
     )
     args = parser.parse_args()
-    download(args.output, args.max_units)
+    download(args.output, args.split)
