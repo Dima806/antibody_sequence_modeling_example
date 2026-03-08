@@ -17,19 +17,11 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install uv
-        run: pip install uv
+      - name: Setup
+        run: make setup
 
-      - name: Install dependencies
-        run: uv pip install -e . --system
-
-      - name: Lint with ruff
-        run: ruff check src tests
-
-      - name: Check formatting with black
-        run: black --check src tests
+      - name: Pre-commit checks
+        run: make prek
 
       - name: Run tests
-        env:
-          WANDB_MODE: disabled
-        run: pytest tests/ --cov=src/antibody_seq_ml --cov-report=term-missing -v
+        run: make test
