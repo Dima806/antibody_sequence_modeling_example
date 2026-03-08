@@ -1,4 +1,4 @@
-.PHONY: setup data-smoke data-full train-smoke sweep-cpu test prek notebook
+.PHONY: setup data-smoke data-full train-smoke sweep-cpu test lint notebook
 
 setup:
 	pip install uv && uv pip install -e . --system
@@ -26,7 +26,7 @@ sweep-cpu:
 test:
 	WANDB_MODE=disabled pytest tests/ -v --cov=src/antibody_seq_ml --cov-report=term-missing
 
-prek:
+lint:
 	pre-commit run --all-files
 
 notebook:
