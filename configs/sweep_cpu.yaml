@@ -1,0 +1,15 @@
+program: src/antibody_seq_ml/sweep.py
+method: random
+metric:
+  name: val/loss
+  goal: minimize
+parameters:
+  model_type:
+    values: [lstm, transformer]
+  learning_rate:
+    values: [0.001, 0.01]
+  dropout:
+    values: [0.1, 0.3]
+  batch_size:
+    values: [32, 64]
+count: 5

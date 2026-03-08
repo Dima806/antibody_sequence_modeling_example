@@ -1,0 +1,5 @@
+wandb>=0.17
+biopython>=1.83
+omegaconf>=2.3
+fair-esm>=2.0.0
+git+https://github.com/dima806/antibody-seq-ml.git

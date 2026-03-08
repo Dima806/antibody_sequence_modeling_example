@@ -1,0 +1,33 @@
+data:
+  max_seq_length: 30
+  train_split: 0.70
+  val_split: 0.15
+  batch_size: 64
+  cache_dir: data/cache
+
+model:
+  type: transformer        # lstm | transformer | esm2
+  embedding_dim: 64
+  d_model: 64
+  nhead: 4
+  hidden_dim: 128
+  num_layers: 3
+  dim_feedforward: 256
+  dropout: 0.1
+  esm_trainable_layers: 2
+
+training:
+  epochs: 30
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  patience: 5
+  checkpoint_dir: checkpoints
+  cls_loss_weight: 1.0
+  reg_loss_weight: 0.1
+  scheduler: cosine        # cosine | plateau
+
+wandb:
+  project: antibody-seq-ml
+  entity: dima806
+  log_gradients: true
+  mode: online             # online | offline | disabled

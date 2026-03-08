@@ -1,0 +1,26 @@
+program: src/antibody_seq_ml/sweep.py
+method: bayes
+metric:
+  name: val/loss
+  goal: minimize
+parameters:
+  model_type:
+    values: [lstm, transformer, esm2]
+  learning_rate:
+    min: 0.00001
+    max: 0.01
+    distribution: log_uniform_values
+  embedding_dim:
+    values: [64, 128, 256]
+  dropout:
+    min: 0.0
+    max: 0.4
+  batch_size:
+    values: [128, 256, 512]
+  num_layers:
+    values: [2, 3, 6]
+  weight_decay:
+    min: 0.00001
+    max: 0.001
+    distribution: log_uniform_values
+count: 50
